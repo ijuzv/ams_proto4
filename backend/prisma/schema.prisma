@@ -1,0 +1,87 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum AttendanceStatus {
+  WFO
+  WFH
+  CL
+  SL
+  COMP_OFF
+  AB
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum LeaveType {
+  SICK
+  CASUAL
+  EARNED
+  COMP_OFF
+  LOP
+}
+
+model User {
+  id           Int          @id @default(autoincrement())
+  email        String       @unique
+  password     String
+  name         String
+  role         UserRole     @default(USER)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  attendances  Attendance[]
+  leaveRequests LeaveRequest[]
+}
+
+model Attendance {
+  id        Int             @id @default(autoincrement())
+  userId    Int
+  user      User            @relation(fields: [userId], references: [id])
+  date      DateTime
+  status    AttendanceStatus
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId], name: "attendance_userId_idx")
+  @@index([date], name: "attendance_date_idx")
+  @@index([userId, date], name: "attendance_userId_date_idx")
+}
+
+model LeaveRequest {
+  id          Int         @id @default(autoincrement())
+  userId      Int
+  user        User        @relation(fields: [userId], references: [id])
+  type        LeaveType
+  fromDate    DateTime
+  toDate      DateTime
+  reason      String
+  status      LeaveStatus @default(PENDING)
+  approvedBy  Int?
+  approvedAt  DateTime?
+  rejectedAt  DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([status], name: "leave_request_status_idx")
+  @@index([userId], name: "leave_request_userId_idx")
+}
+
+// Indexes are now defined within their respective models
