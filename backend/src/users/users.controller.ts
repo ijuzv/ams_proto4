@@ -1,10 +1,11 @@
-import { Controller, Get, Param, Put, UseGuards, Body, ParseIntPipe, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Param, Post, Put, UseGuards, Body, ParseIntPipe, NotFoundException, Req } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
-import { UpdateUserRoleDto } from './dto/update-user-role.dto';
+import { PasswordUpdateDto, UpdateUserRoleDto } from './dto/update-user-role.dto';
+import { CreateUserDto } from './dto/create-user.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiTags('users')
@@ -13,6 +14,26 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 @ApiBearerAuth()
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
+  @Post()
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Create a new user (Admin only)' })
+  @ApiResponse({ status: 201, description: 'User created successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async create(@Body() createUserDto: CreateUserDto) {
+    return this.usersService.create(createUserDto);
+  }
+
+  @Put("password-change")
+  @ApiOperation({ summary: 'Update user password)' })
+  @ApiResponse({ status: 201, description: 'User password updated successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async update(@Req() req, @Body() passwordUpdateDto: PasswordUpdateDto) {
+    const userId = req.user.id;
+    return this.usersService.updatePassword(userId, passwordUpdateDto)
+  }
 
   @Get()
   @Roles(UserRole.ADMIN)

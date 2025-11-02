@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import Cookies from 'js-cookie';
 import { authApi } from '@/lib/api';
 
 type User = {
@@ -32,14 +31,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const loadUser = async () => {
       try {
-        const token = Cookies.get('auth_token');
+        const token = localStorage.getItem('auth_token'); // FIXED
         if (token) {
-          const userData = await authApi.getProfile();
+          const userData = await authApi.getProfile() as User;
           setUser(userData);
         }
       } catch (error) {
         console.error('Failed to load user', error);
-        Cookies.remove('auth_token');
+        localStorage.removeItem('auth_token');
       } finally {
         setLoading(false);
       }
@@ -49,10 +48,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string) => {
-    const { access_token, user } = await authApi.login(email, password);
-    Cookies.set('auth_token', access_token, { expires: 1 });
-    setUser(user);
+    try {
+      const { access_token, user } = await authApi.login(email, password);
+
+      localStorage.setItem('auth_token', access_token);
+
+      setUser(user);
+      return user; // Optional but useful
+    } catch (err: any) {
+      const message =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Invalid email or password";
+
+      // Re-throw so LoginPage can catch it
+      throw new Error(message);
+    }
   };
+
 
   const register = async (name: string, email: string, password: string) => {
     await authApi.register(name, email, password);
@@ -60,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
-    Cookies.remove('auth_token');
+    localStorage.removeItem('auth_token'); // FIXED
     setUser(null);
     router.push('/login');
   };
@@ -84,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;

@@ -23,6 +23,8 @@ export class AuthController {
       registerDto.name,
       registerDto.email,
       registerDto.password,
+      registerDto.role,
+      registerDto.managerId,
     );
     return { message: 'User registered successfully', user };
   }

@@ -15,11 +15,13 @@ import {
   Home
 } from 'lucide-react';
 
+import { LeaveStatus } from '@/types/leaves';
+
 interface ActivityItem {
   id: string | number;
   type: string;
   details: string;
-  status: 'APPROVED' | 'PENDING' | 'REJECTED';
+  status: LeaveStatus;
   date: string;
 }
 
