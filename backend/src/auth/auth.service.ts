@@ -28,8 +28,8 @@ export class AuthService {
   }
 
   async login(user: User) {
-    const payload: UserPayload = {
-      id: user.id,
+    const payload = {
+      sub: user.id.toString(), // JWT standard uses 'sub' (subject) for user ID
       email: user.email,
       role: user.role,
     };

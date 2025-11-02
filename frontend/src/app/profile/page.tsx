@@ -2,9 +2,14 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
+import { motion } from 'framer-motion';
+import { User, Mail, Shield, Calendar, Edit2, Save, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export default function ProfilePage() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -13,7 +18,7 @@ export default function ProfilePage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
@@ -27,61 +32,93 @@ export default function ProfilePage() {
 
   if (!user) return null;
 
+  const infoItems = [
+    {
+      label: 'Full name',
+      value: user.name,
+      icon: User,
+      field: 'name',
+    },
+    {
+      label: 'Email address',
+      value: user.email,
+      icon: Mail,
+      field: 'email',
+      disabled: true,
+    },
+    {
+      label: 'Role',
+      value: user.role.charAt(0) + user.role.slice(1).toLowerCase(),
+      icon: Shield,
+    },
+    {
+      label: 'Member since',
+      value: new Date().toLocaleDateString(),
+      icon: Calendar,
+    },
+  ];
+
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-        <div className="px-4 py-5 sm:px-6 flex justify-between items-center border-b border-gray-200">
-          <div>
-            <h3 className="text-lg font-medium leading-6 text-gray-900">Profile Information</h3>
-            <p className="mt-1 max-w-2xl text-sm text-gray-500">
-              Personal details and account information
-            </p>
-          </div>
-          {!isEditing && (
-            <button
-              onClick={() => setIsEditing(true)}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              Edit Profile
-            </button>
-          )}
+    <div className="space-y-6 max-w-4xl">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex justify-between items-center pb-6 border-b border-border"
+      >
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Profile</h1>
+          <p className="mt-1 text-muted-foreground">
+            Manage your personal information
+          </p>
+        </div>
+        {!isEditing && (
+          <Button onClick={() => setIsEditing(true)} className="transition-smooth">
+            <Edit2 className="mr-2 h-4 w-4" />
+            Edit Profile
+          </Button>
+        )}
+      </motion.div>
+
+      {/* Profile Information Card */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="rounded-2xl border border-border bg-white shadow-sm overflow-hidden"
+      >
+        <div className="px-6 py-5 border-b border-border bg-white">
+          <h2 className="text-lg font-semibold text-foreground">
+            Profile Information
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Personal details and account information
+          </p>
         </div>
 
         {isEditing ? (
-          <form onSubmit={handleSubmit} className="px-4 py-5 sm:p-6">
-            <div className="space-y-6">
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  id="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                />
-              </div>
+          <form onSubmit={handleSubmit} className="p-6">
+            <div className="grid gap-6">
+              {infoItems
+                .filter((item) => item.field)
+                .map((item) => (
+                  <div key={item.field} className="grid gap-2">
+                    <Label htmlFor={item.field}>{item.label}</Label>
+                    <Input
+                      id={item.field}
+                      name={item.field}
+                      value={formData[item.field as keyof typeof formData]}
+                      onChange={handleInputChange}
+                      disabled={item.disabled}
+                      required
+                    />
+                  </div>
+                ))}
 
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                  Email address
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  id="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  disabled
-                />
-              </div>
-
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
+              <div className="flex justify-end gap-3 pt-4">
+                <Button
                   type="button"
+                  variant="outline"
                   onClick={() => {
                     setIsEditing(false);
                     setFormData({
@@ -89,101 +126,105 @@ export default function ProfilePage() {
                       email: user?.email || '',
                     });
                   }}
-                  className="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  className="transition-smooth"
                 >
+                  <X className="mr-2 h-4 w-4" />
                   Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
+                </Button>
+                <Button type="submit" className="transition-smooth">
+                  <Save className="mr-2 h-4 w-4" />
                   Save Changes
-                </button>
+                </Button>
               </div>
             </div>
           </form>
         ) : (
-          <div className="px-4 py-5 sm:px-6">
-            <dl className="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2">
-              <div className="sm:col-span-1">
-                <dt className="text-sm font-medium text-gray-500">Full name</dt>
-                <dd className="mt-1 text-sm text-gray-900">{user.name}</dd>
-              </div>
-              <div className="sm:col-span-1">
-                <dt className="text-sm font-medium text-gray-500">Email address</dt>
-                <dd className="mt-1 text-sm text-gray-900">{user.email}</dd>
-              </div>
-              <div className="sm:col-span-1">
-                <dt className="text-sm font-medium text-gray-500">Role</dt>
-                <dd className="mt-1 text-sm text-gray-900 capitalize">{user.role.toLowerCase()}</dd>
-              </div>
-              <div className="sm:col-span-1">
-                <dt className="text-sm font-medium text-gray-500">Member since</dt>
-                <dd className="mt-1 text-sm text-gray-900">
-                  {new Date().toLocaleDateString()} {/* TODO: Add joined date */}
-                </dd>
-              </div>
-            </dl>
+          <div className="p-6">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              {infoItems.map((item, index) => {
+                const Icon = item.icon;
+                return (
+                  <motion.div
+                    key={item.label}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="flex items-start gap-4 p-4 rounded-lg hover:bg-muted/50 transition-all duration-200"
+                  >
+                    <div className="flex-shrink-0 rounded-lg bg-primary/10 p-3">
+                      <Icon className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <dt className="text-sm font-medium text-muted-foreground">
+                        {item.label}
+                      </dt>
+                      <dd className="mt-1 text-sm font-semibold text-foreground">
+                        {item.value}
+                      </dd>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
           </div>
         )}
-      </div>
+      </motion.div>
 
-      <div className="mt-6 bg-white shadow overflow-hidden sm:rounded-lg">
-        <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-          <h3 className="text-lg font-medium leading-6 text-gray-900">Change Password</h3>
-          <p className="mt-1 max-w-2xl text-sm text-gray-500">
-            Update your password
+      {/* Change Password Card */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="rounded-2xl border border-border bg-white shadow-sm overflow-hidden"
+      >
+        <div className="px-6 py-5 border-b border-border bg-white">
+          <h2 className="text-lg font-semibold text-foreground">
+            Change Password
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Update your password to keep your account secure
           </p>
         </div>
-        <div className="px-4 py-5 sm:p-6">
+        <div className="p-6">
           <form className="space-y-6">
-            <div>
-              <label htmlFor="current-password" className="block text-sm font-medium text-gray-700">
-                Current Password
-              </label>
-              <input
+            <div className="grid gap-2">
+              <Label htmlFor="current-password">Current Password</Label>
+              <Input
                 type="password"
                 id="current-password"
                 name="current-password"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                required
               />
             </div>
 
-            <div>
-              <label htmlFor="new-password" className="block text-sm font-medium text-gray-700">
-                New Password
-              </label>
-              <input
+            <div className="grid gap-2">
+              <Label htmlFor="new-password">New Password</Label>
+              <Input
                 type="password"
                 id="new-password"
                 name="new-password"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                required
               />
             </div>
 
-            <div>
-              <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700">
-                Confirm New Password
-              </label>
-              <input
+            <div className="grid gap-2">
+              <Label htmlFor="confirm-password">Confirm New Password</Label>
+              <Input
                 type="password"
                 id="confirm-password"
                 name="confirm-password"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                required
               />
             </div>
 
             <div className="flex justify-end">
-              <button
-                type="submit"
-                className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
+              <Button type="submit" className="transition-smooth">
                 Update Password
-              </button>
+              </Button>
             </div>
           </form>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

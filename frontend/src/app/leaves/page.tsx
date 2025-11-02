@@ -4,14 +4,52 @@ import { useState } from 'react';
 import { format } from 'date-fns';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { leavesApi } from '@/lib/api';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Calendar, Plus, X, Clock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useToast } from '@/components/ui/use-toast';
 
 type LeaveStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 type LeaveType = 'SICK' | 'CASUAL' | 'EARNED' | 'COMP_OFF' | 'LOP';
 
+interface Leave {
+  id: number;
+  type: LeaveType;
+  fromDate: string;
+  toDate: string;
+  reason: string;
+  status: LeaveStatus;
+}
+
+interface LeaveFormData {
+  type: LeaveType;
+  fromDate: string;
+  toDate: string;
+  reason: string;
+}
+
 const statusColors = {
-  PENDING: 'bg-yellow-100 text-yellow-800',
-  APPROVED: 'bg-green-100 text-green-800',
-  REJECTED: 'bg-red-100 text-red-800',
+  PENDING: 'bg-warning/10 text-warning border-warning/20',
+  APPROVED: 'bg-success/10 text-success border-success/20',
+  REJECTED: 'bg-destructive/10 text-destructive border-destructive/20',
 };
 
 const leaveTypeLabels = {
@@ -24,31 +62,44 @@ const leaveTypeLabels = {
 
 export default function LeavesPage() {
   const queryClient = useQueryClient();
-  const [showForm, setShowForm] = useState(false);
+  const [showDialog, setShowDialog] = useState(false);
   const [formData, setFormData] = useState({
     type: 'CASUAL' as LeaveType,
     fromDate: format(new Date(), 'yyyy-MM-dd'),
     toDate: format(new Date(), 'yyyy-MM-dd'),
     reason: '',
   });
+  const { toast } = useToast();
 
   // Fetch leaves
   const { data: leaves, isLoading } = useQuery({
     queryKey: ['leaves'],
-    queryFn: () => leavesApi.getMyLeaves(),
+    queryFn: () => leavesApi.getMyLeaves() as Promise<Leave[]>,
   });
 
   // Apply for leave
   const applyLeaveMutation = useMutation({
-    mutationFn: (data: any) => leavesApi.apply(data),
+    mutationFn: (data: LeaveFormData & { fromDate: string; toDate: string }) => leavesApi.apply(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leaves'] });
-      setShowForm(false);
+      setShowDialog(false);
       setFormData({
         type: 'CASUAL',
         fromDate: format(new Date(), 'yyyy-MM-dd'),
         toDate: format(new Date(), 'yyyy-MM-dd'),
         reason: '',
+      });
+      toast({
+        title: 'Success!',
+        description: 'Leave application submitted successfully.',
+        variant: 'success',
+      });
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to submit leave application. Please try again.',
+        variant: 'destructive',
       });
     },
   });
@@ -62,9 +113,11 @@ export default function LeavesPage() {
     });
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
@@ -73,182 +126,219 @@ export default function LeavesPage() {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          <p className="text-sm text-muted-foreground">Loading leaves...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">My Leave Requests</h2>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-        >
-          {showForm ? 'Cancel' : 'Apply for Leave'}
-        </button>
-      </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
+      >
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Leave Requests</h1>
+          <p className="mt-1 text-muted-foreground">Manage your leave applications</p>
+        </div>
+        <Button onClick={() => setShowDialog(true)} className="transition-smooth">
+          <Plus className="mr-2 h-4 w-4" />
+          Apply for Leave
+        </Button>
+      </motion.div>
 
-      {/* Leave Application Form */}
-      {showForm && (
-        <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
-          <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Apply for Leave</h3>
-            <form onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
-                <div className="sm:col-span-2">
-                  <label htmlFor="type" className="block text-sm font-medium text-gray-700">
-                    Leave Type
-                  </label>
-                  <select
-                    id="type"
-                    name="type"
-                    value={formData.type}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-                    required
-                  >
+      {/* Leave Application Dialog */}
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Apply for Leave</DialogTitle>
+            <DialogDescription>
+              Fill in the details to submit your leave application.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmit}>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="type">Leave Type</Label>
+                <Select
+                  value={formData.type}
+                  onValueChange={(value) =>
+                    setFormData((prev) => ({ ...prev, type: value as LeaveType }))
+                  }
+                >
+                  <SelectTrigger id="type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
                     {Object.entries(leaveTypeLabels).map(([value, label]) => (
-                      <option key={value} value={value}>
+                      <SelectItem key={value} value={value}>
                         {label}
-                      </option>
+                      </SelectItem>
                     ))}
-                  </select>
-                </div>
+                  </SelectContent>
+                </Select>
+              </div>
 
-                <div className="sm:col-span-2">
-                  <label htmlFor="fromDate" className="block text-sm font-medium text-gray-700">
-                    From Date
-                  </label>
-                  <input
-                    type="date"
-                    name="fromDate"
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="fromDate">From Date</Label>
+                  <Input
                     id="fromDate"
+                    name="fromDate"
+                    type="date"
                     value={formData.fromDate}
                     onChange={handleInputChange}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                     required
                   />
                 </div>
-
-                <div className="sm:col-span-2">
-                  <label htmlFor="toDate" className="block text-sm font-medium text-gray-700">
-                    To Date
-                  </label>
-                  <input
-                    type="date"
-                    name="toDate"
+                <div className="grid gap-2">
+                  <Label htmlFor="toDate">To Date</Label>
+                  <Input
                     id="toDate"
+                    name="toDate"
+                    type="date"
                     value={formData.toDate}
                     onChange={handleInputChange}
                     min={formData.fromDate}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                     required
                   />
                 </div>
-
-                <div className="sm:col-span-6">
-                  <label htmlFor="reason" className="block text-sm font-medium text-gray-700">
-                    Reason
-                  </label>
-                  <div className="mt-1">
-                    <textarea
-                      id="reason"
-                      name="reason"
-                      rows={3}
-                      value={formData.reason}
-                      onChange={handleInputChange}
-                      className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border border-gray-300 rounded-md"
-                      required
-                    />
-                  </div>
-                </div>
               </div>
 
-              <div className="mt-6 flex justify-end space-x-3">
-                <button
-                  type="button"
-                  onClick={() => setShowForm(false)}
-                  className="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={applyLeaveMutation.isPending}
-                  className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {applyLeaveMutation.isPending ? 'Submitting...' : 'Submit Application'}
-                </button>
+              <div className="grid gap-2">
+                <Label htmlFor="reason">Reason</Label>
+                <Textarea
+                  id="reason"
+                  name="reason"
+                  value={formData.reason}
+                  onChange={handleInputChange}
+                  placeholder="Enter reason for leave..."
+                  rows={4}
+                  required
+                />
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowDialog(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={applyLeaveMutation.isPending}
+                className="transition-smooth"
+              >
+                {applyLeaveMutation.isPending ? 'Submitting...' : 'Submit Application'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Leaves List */}
-      <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-        <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">
-            My Leave History
-          </h3>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="rounded-2xl border border-border bg-white shadow-sm overflow-hidden"
+      >
+        <div className="px-6 py-5 border-b border-border bg-white">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold text-foreground">Leave History</h2>
+          </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="w-full">
+            <thead className="bg-muted/50">
               <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Type
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Period
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Days
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Status
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Reason
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {leaves?.length > 0 ? (
-                leaves.map((leave: any) => (
-                  <tr key={leave.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {leaveTypeLabels[leave.type as keyof typeof leaveTypeLabels] || leave.type}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {format(new Date(leave.fromDate), 'MMM d, yyyy')} - {format(new Date(leave.toDate), 'MMM d, yyyy')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {Math.ceil((new Date(leave.toDate).getTime() - new Date(leave.fromDate).getTime()) / (1000 * 60 * 60 * 24)) + 1}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[leave.status as keyof typeof statusColors]}`}>
-                        {leave.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {leave.reason}
+            <tbody className="divide-y divide-border">
+              <AnimatePresence>
+                {leaves && leaves.length > 0 ? (
+                  leaves.map((leave: Leave, index: number) => (
+                    <motion.tr
+                      key={leave.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="transition-all duration-200 hover:bg-muted/30"
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm font-medium text-foreground">
+                            {leaveTypeLabels[leave.type as keyof typeof leaveTypeLabels] ||
+                              leave.type}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                        {format(new Date(leave.fromDate), 'MMM d, yyyy')} -{' '}
+                        {format(new Date(leave.toDate), 'MMM d, yyyy')}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                        {Math.ceil(
+                          (new Date(leave.toDate).getTime() -
+                            new Date(leave.fromDate).getTime()) /
+                            (1000 * 60 * 60 * 24)
+                        ) + 1}{' '}
+                        day(s)
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium border ${
+                            statusColors[leave.status as keyof typeof statusColors]
+                          }`}
+                        >
+                          {leave.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-muted-foreground max-w-xs truncate">
+                        {leave.reason}
+                      </td>
+                    </motion.tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center">
+                      <Calendar className="mx-auto h-12 w-12 text-muted-foreground/50" />
+                      <p className="mt-4 text-sm text-muted-foreground">
+                        No leave requests found
+                      </p>
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
-                    No leave requests found
-                  </td>
-                </tr>
-              )}
+                )}
+              </AnimatePresence>
             </tbody>
           </table>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

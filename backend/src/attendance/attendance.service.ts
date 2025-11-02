@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AttendanceStatus, User } from '@prisma/client';
 import { MarkAttendanceDto } from './dto/mark-attendance.dto';
@@ -17,39 +17,78 @@ type AttendanceWithUser = {
 
 @Injectable()
 export class AttendanceService {
+  private readonly logger = new Logger(AttendanceService.name);
+
   constructor(private prisma: PrismaService) {}
 
   async markAttendance(userId: number, dto: MarkAttendanceDto) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
-    // Check if attendance already marked for today
-    const existingAttendance = await this.prisma.attendance.findFirst({
-      where: {
-        userId,
-        date: {
-          gte: today,
-          lt: new Date(today.getTime() + 24 * 60 * 60 * 1000), // Next day
+      // Check if attendance already marked for today
+      const existingAttendance = await this.prisma.attendance.findFirst({
+        where: {
+          userId,
+          date: {
+            gte: today,
+            lt: new Date(today.getTime() + 24 * 60 * 60 * 1000), // Next day
+          },
         },
-      },
-    });
-
-    if (existingAttendance) {
-      // Update existing attendance
-      return this.prisma.attendance.update({
-        where: { id: existingAttendance.id },
-        data: { status: dto.status },
       });
-    }
 
-    // Create new attendance record
-    return this.prisma.attendance.create({
-      data: {
-        userId,
-        date: new Date(),
-        status: dto.status,
-      },
-    });
+      if (existingAttendance) {
+        // Update existing attendance
+        this.logger.log(`Updating attendance for user ${userId} on ${today.toISOString()}`);
+        return await this.prisma.attendance.update({
+          where: { id: existingAttendance.id },
+          data: { status: dto.status },
+        });
+      }
+
+      // Create new attendance record with normalized date (no time component)
+      const attendanceDate = new Date(today);
+      
+      this.logger.log(`Creating attendance for user ${userId} on ${attendanceDate.toISOString()} with status ${dto.status}`);
+      
+      return await this.prisma.attendance.create({
+        data: {
+          userId,
+          date: attendanceDate,
+          status: dto.status,
+        },
+      });
+    } catch (error: any) {
+      this.logger.error(`Error marking attendance for user ${userId}:`, error);
+      
+      // Handle unique constraint violation (race condition)
+      if (error.code === 'P2002') {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        // If duplicate key error, try to update existing record
+        const existing = await this.prisma.attendance.findFirst({
+          where: {
+            userId,
+            date: {
+              gte: today,
+              lt: new Date(today.getTime() + 24 * 60 * 60 * 1000),
+            },
+          },
+        });
+
+        if (existing) {
+          this.logger.log(`Handling race condition: updating existing attendance for user ${userId}`);
+          return await this.prisma.attendance.update({
+            where: { id: existing.id },
+            data: { status: dto.status },
+          });
+        }
+      }
+      
+      // Re-throw the error if we can't handle it
+      throw error;
+    }
   }
 
   async getMyAttendance(userId: number, dto: GetAttendanceDto) {

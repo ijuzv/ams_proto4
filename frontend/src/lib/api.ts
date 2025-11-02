@@ -85,9 +85,14 @@ export const usersApi = {
 // Attendance API
 export const attendanceApi = {
   mark: (data: { status: 'WFO' | 'WFH' | 'CL' | 'SL' | 'COMP_OFF' | 'AB' }) =>
-    api.post('/attendance', data),
-  getMyAttendance: (params?: { month?: number; year?: number }) =>
-    api.get('/attendance/me', { params }),
+    api.post('/attendance/mark', data),
+  getMyAttendance: (month?: number, year?: number) => {
+    const params: { month?: number; year?: number } = {};
+    if (month) params.month = month;
+    if (year) params.year = year;
+    return api.get('/attendance/me', { params });
+  },
+  getSummary: () => api.get('/attendance/summary'),
   getByDate: (date: string) =>
     api.get('/attendance/date', { params: { date } }),
 };

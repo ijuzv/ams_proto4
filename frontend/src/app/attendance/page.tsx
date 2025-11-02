@@ -1,52 +1,88 @@
 'use client';
 
 import { useState } from 'react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday } from 'date-fns';
-import { useQuery } from '@tanstack/react-query';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday, getDay } from 'date-fns';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { attendanceApi } from '@/lib/api';
+import { motion } from 'framer-motion';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, CheckCircle2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/ui/use-toast';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 type AttendanceStatus = 'WFO' | 'WFH' | 'CL' | 'SL' | 'COMP_OFF' | 'AB';
 
-const statusColors = {
-  WFO: 'bg-blue-100 text-blue-800',
-  WFH: 'bg-purple-100 text-purple-800',
-  CL: 'bg-green-100 text-green-800',
-  SL: 'bg-yellow-100 text-yellow-800',
-  COMP_OFF: 'bg-indigo-100 text-indigo-800',
-  AB: 'bg-red-100 text-red-800',
+interface AttendanceRecord {
+  id: string | number;
+  date: string;
+  status: AttendanceStatus;
+}
+
+const statusConfig = {
+  WFO: { label: 'Work From Office', color: 'bg-amber-100 text-amber-700 border-amber-200', badge: 'bg-amber-500' },
+  WFH: { label: 'Work From Home', color: 'bg-emerald-100 text-emerald-700 border-emerald-200', badge: 'bg-emerald-500' },
+  CL: { label: 'Casual Leave', color: 'bg-blue-100 text-blue-700 border-blue-200', badge: 'bg-blue-500' },
+  SL: { label: 'Sick Leave', color: 'bg-rose-100 text-rose-700 border-rose-200', badge: 'bg-rose-500' },
+  COMP_OFF: { label: 'Compensatory Off', color: 'bg-purple-100 text-purple-700 border-purple-200', badge: 'bg-purple-500' },
+  AB: { label: 'Absent', color: 'bg-gray-100 text-gray-700 border-gray-200', badge: 'bg-gray-500' },
 };
 
 export default function AttendancePage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedStatus, setSelectedStatus] = useState<AttendanceStatus>('WFO');
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
+  // Add empty cells for days before month start
+  const firstDayOfWeek = getDay(monthStart);
+  const emptyDays = Array(firstDayOfWeek).fill(null);
+
   const { data: attendance, isLoading } = useQuery({
     queryKey: ['attendance', currentDate.getFullYear(), currentDate.getMonth() + 1],
-    queryFn: () => 
+    queryFn: () =>
       attendanceApi.getMyAttendance(
-        currentDate.getMonth() + 1, 
+        currentDate.getMonth() + 1,
         currentDate.getFullYear()
-      ),
+      ) as Promise<AttendanceRecord[]>,
+  });
+
+  const markAttendanceMutation = useMutation({
+    mutationFn: (status: AttendanceStatus) => attendanceApi.mark({ status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      toast({
+        title: 'Success!',
+        description: 'Attendance marked successfully.',
+        variant: 'success',
+      });
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to mark attendance. Please try again.',
+        variant: 'destructive',
+      });
+    },
   });
 
   const markAttendance = async () => {
-    try {
-      await attendanceApi.mark(selectedStatus);
-      // Refetch attendance data
-      // queryClient.invalidateQueries(['attendance']);
-    } catch (error) {
-      console.error('Error marking attendance:', error);
-    }
+    markAttendanceMutation.mutate(selectedStatus);
   };
 
-  const getStatusForDay = (day: Date) => {
-    if (!attendance) return null;
+  const getStatusForDay = (day: Date): AttendanceRecord | undefined => {
+    if (!attendance) return undefined;
     const dateStr = format(day, 'yyyy-MM-dd');
-    return attendance.find((a: any) => format(new Date(a.date), 'yyyy-MM-dd') === dateStr);
+    return attendance.find((a: AttendanceRecord) => format(new Date(a.date), 'yyyy-MM-dd') === dateStr);
   };
 
   const navigateMonth = (direction: 'prev' | 'next') => {
@@ -58,119 +94,180 @@ export default function AttendancePage() {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          <p className="text-sm text-muted-foreground">Loading attendance...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">
-          {format(currentDate, 'MMMM yyyy')}
-        </h2>
-        <div className="flex space-x-2">
-          <button
-            onClick={() => navigateMonth('prev')}
-            className="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-          >
-            Previous
-          </button>
-          <button
-            onClick={() => setCurrentDate(new Date())}
-            className="px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
-          >
-            Today
-          </button>
-          <button
-            onClick={() => navigateMonth('next')}
-            className="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-          >
-            Next
-          </button>
+    <div className="space-y-6">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
+      >
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Attendance</h1>
+          <p className="mt-1 text-muted-foreground">Track and manage your attendance</p>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Mark Attendance */}
-      <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
-        <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg font-medium text-gray-900">Mark Today's Attendance</h3>
-          <div className="mt-4 flex items-center space-x-4">
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value as AttendanceStatus)}
-              className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-            >
-              <option value="WFO">Work From Office (WFO)</option>
-              <option value="WFH">Work From Home (WFH)</option>
-              <option value="CL">Casual Leave (CL)</option>
-              <option value="SL">Sick Leave (SL)</option>
-              <option value="COMP_OFF">Compensatory Off</option>
-            </select>
-            <button
-              onClick={markAttendance}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              Mark Attendance
-            </button>
-          </div>
+      {/* Mark Attendance Card */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="rounded-2xl border border-border bg-white p-6 shadow-sm"
+      >
+        <div className="flex items-center gap-2 mb-4">
+          <CheckCircle2 className="h-5 w-5 text-primary" />
+          <h2 className="text-lg font-semibold text-foreground">Mark Today's Attendance</h2>
         </div>
-      </div>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Select value={selectedStatus} onValueChange={(value) => setSelectedStatus(value as AttendanceStatus)}>
+            <SelectTrigger className="w-full sm:w-[300px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(statusConfig).map(([key, config]) => (
+                <SelectItem key={key} value={key}>
+                  {config.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            onClick={markAttendance}
+            disabled={markAttendanceMutation.isPending}
+            className="transition-smooth"
+          >
+            {markAttendanceMutation.isPending ? 'Marking...' : 'Mark Attendance'}
+          </Button>
+        </div>
+      </motion.div>
 
       {/* Calendar View */}
-      <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-        <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">
-            Attendance Calendar
-          </h3>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="rounded-2xl border border-border bg-white shadow-sm overflow-hidden"
+      >
+        <div className="px-6 py-4 border-b border-border bg-white">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <CalendarIcon className="h-5 w-5 text-primary" />
+              {format(currentDate, 'MMMM yyyy')}
+            </h2>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => navigateMonth('prev')}
+                className="transition-smooth"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setCurrentDate(new Date())}
+                className="transition-smooth"
+              >
+                Today
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => navigateMonth('next')}
+                className="transition-smooth"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </div>
-        <div className="px-4 py-5 sm:p-6">
-          <div className="grid grid-cols-7 gap-1">
+        <div className="p-6">
+          {/* Day headers */}
+          <div className="grid grid-cols-7 gap-2 mb-2">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-              <div key={day} className="text-center font-medium text-gray-500 text-sm py-2">
+              <div
+                key={day}
+                className="text-center font-semibold text-sm text-muted-foreground py-2"
+              >
                 {day}
               </div>
             ))}
-            
+          </div>
+
+          {/* Calendar grid */}
+          <div className="grid grid-cols-7 gap-2">
+            {emptyDays.map((_, index) => (
+              <div key={`empty-${index}`} className="h-20" />
+            ))}
             {daysInMonth.map((day) => {
-              const attendance = getStatusForDay(day);
+              const attendanceData = getStatusForDay(day);
               const isCurrentDay = isToday(day);
-              
+              const status = attendanceData?.status as AttendanceStatus;
+              const config = status ? statusConfig[status] : null;
+
               return (
-                <div 
+                <motion.div
                   key={day.toString()}
-                  className={`p-2 h-24 border border-gray-100 ${isCurrentDay ? 'bg-indigo-50' : ''}`}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  whileHover={{ scale: 1.05 }}
+                  className={`relative h-20 p-2 border rounded-lg transition-all duration-200 ${
+                    isCurrentDay
+                      ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                      : 'border-border bg-white hover:bg-muted/50'
+                  } ${config ? config.color : ''}`}
                 >
-                  <div className="flex justify-between">
-                    <span className={`text-sm ${isCurrentDay ? 'font-bold text-indigo-700' : 'text-gray-700'}`}>
+                  <div className="flex flex-col h-full">
+                    <span
+                      className={`text-sm font-medium ${
+                        isCurrentDay ? 'text-primary' : 'text-foreground'
+                      }`}
+                    >
                       {format(day, 'd')}
                     </span>
-                    {attendance && (
-                      <span 
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          statusColors[attendance.status as keyof typeof statusColors] || 'bg-gray-100 text-gray-800'
-                        }`}
-                      >
-                        {attendance.status}
-                      </span>
+                    {attendanceData && config && (
+                      <div className="mt-auto">
+                        <div
+                          className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${config.color}`}
+                        >
+                          {status}
+                        </div>
+                      </div>
                     )}
                   </div>
-                </div>
+                </motion.div>
               );
             })}
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Legend */}
-      <div className="mt-6 flex flex-wrap gap-2">
-        {Object.entries(statusColors).map(([status, color]) => (
-          <div key={status} className="flex items-center">
-            <span className={`inline-block w-3 h-3 rounded-full ${color.replace('text-', 'bg-').split(' ')[0]}`}></span>
-            <span className="ml-1 text-sm text-gray-600">{status}</span>
-          </div>
-        ))}
-      </div>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3 }}
+        className="rounded-2xl border border-border bg-white p-6 shadow-sm"
+      >
+        <h3 className="text-sm font-semibold text-foreground mb-4">Legend</h3>
+        <div className="flex flex-wrap gap-4">
+          {Object.entries(statusConfig).map(([key, config]) => (
+            <div key={key} className="flex items-center gap-2">
+              <div className={`w-3 h-3 rounded-full ${config.badge}`}></div>
+              <span className="text-sm text-muted-foreground">{config.label}</span>
+            </div>
+          ))}
+        </div>
+      </motion.div>
     </div>
   );
 }
