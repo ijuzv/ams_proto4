@@ -13,6 +13,7 @@ datasource db {
 enum UserRole {
   USER
   ADMIN
+  MANAGER
 }
 
 enum AttendanceStatus {
@@ -26,8 +27,11 @@ enum AttendanceStatus {
 
 enum LeaveStatus {
   PENDING
-  APPROVED
-  REJECTED
+  MANAGER_APPROVED
+  MANAGER_REJECTED
+  HR_APPROVED
+  HR_REJECTED
+  CANCELLED
 }
 
 enum LeaveType {
@@ -44,6 +48,7 @@ model User {
   password     String
   name         String
   role         UserRole     @default(USER)
+  managerId    Int?
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   attendances  Attendance[]

@@ -56,4 +56,14 @@ export class AttendanceController {
   async getAttendanceSummary(@Req() req: any) {
     return this.attendanceService.getUserAttendanceSummary(req.user.id);
   }
+
+  @Get('all-summary')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get current month attendance summary' })
+  @ApiResponse({ status: 200, description: 'Return attendance summary' })
+  async getAdminSummary(@Req() req: any) {
+    return this.attendanceService.getUserAdminSummary(req.user.id);
+  }
 }

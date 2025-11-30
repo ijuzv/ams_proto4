@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #ffc107;
+            color: #333;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 5px 5px;
+        }
+        .reminder {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #4a6fa5;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #6c757d;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>Attendance Reminder</h2>
+    </div>
+    <div class="content">
+        <p>Hello {{employeeName}},</p>
+        
+        <div class="reminder">
+            <p><strong>Reminder:</strong> You haven't marked your attendance for today yet.</p>
+            <p>Current time: {{currentTime}}</p>
+        </div>
+        
+        <p>Please mark your attendance as soon as possible to ensure accurate records.</p>
+        
+        <p>
+            <a href="{{attendanceLink}}" class="button">Mark Attendance Now</a>
+        </p>
+        
+        <p>If you have already marked your attendance, please ignore this reminder.</p>
+        
+        <div class="footer">
+            <p>This is an automated reminder. Please do not reply to this email.</p>
+            <p>&copy; {{currentYear}} Leave Management System</p>
+        </div>
+    </div>
+</body>
+</html>

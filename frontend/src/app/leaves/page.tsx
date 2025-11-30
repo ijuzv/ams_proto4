@@ -26,18 +26,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
-
-type LeaveStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
-type LeaveType = 'SICK' | 'CASUAL' | 'EARNED' | 'COMP_OFF' | 'LOP';
-
-interface Leave {
-  id: number;
-  type: LeaveType;
-  fromDate: string;
-  toDate: string;
-  reason: string;
-  status: LeaveStatus;
-}
+import { useAuth } from '@/contexts/auth-context';
+import { Leave, LeaveStatus, LeaveType } from '@/types/leaves';
 
 interface LeaveFormData {
   type: LeaveType;
@@ -48,8 +38,11 @@ interface LeaveFormData {
 
 const statusColors = {
   PENDING: 'bg-warning/10 text-warning border-warning/20',
-  APPROVED: 'bg-success/10 text-success border-success/20',
-  REJECTED: 'bg-destructive/10 text-destructive border-destructive/20',
+  MANAGER_APPROVED: 'bg-info/10 text-info border-info/20',
+  HR_APPROVED: 'bg-success/10 text-success border-success/20',
+  MANAGER_REJECTED: 'bg-destructive/10 text-destructive border-destructive/20',
+  HR_REJECTED: 'bg-destructive/20 text-destructive/80 border-destructive/30',
+  CANCELLED: 'bg-muted/10 text-muted-foreground border-muted/20',
 };
 
 const leaveTypeLabels = {
@@ -62,6 +55,7 @@ const leaveTypeLabels = {
 
 export default function LeavesPage() {
   const queryClient = useQueryClient();
+  const { user } = useAuth()
   const [showDialog, setShowDialog] = useState(false);
   const [formData, setFormData] = useState({
     type: 'CASUAL' as LeaveType,
@@ -73,13 +67,13 @@ export default function LeavesPage() {
 
   // Fetch leaves
   const { data: leaves, isLoading } = useQuery({
-    queryKey: ['leaves'],
+    queryKey: ['my-leaves'],
     queryFn: () => leavesApi.getMyLeaves() as Promise<Leave[]>,
   });
 
   // Apply for leave
   const applyLeaveMutation = useMutation({
-    mutationFn: (data: LeaveFormData & { fromDate: string; toDate: string }) => leavesApi.apply(data),
+    mutationFn: (data: LeaveFormData) => leavesApi.apply(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leaves'] });
       setShowDialog(false);
@@ -106,10 +100,12 @@ export default function LeavesPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // send date-only strings (yyyy-MM-dd) to match backend expectations
     applyLeaveMutation.mutate({
-      ...formData,
-      fromDate: new Date(formData.fromDate).toISOString(),
-      toDate: new Date(formData.toDate).toISOString(),
+      type: formData.type,
+      fromDate: formData.fromDate,
+      toDate: formData.toDate,
+      reason: formData.reason,
     });
   };
 
@@ -291,11 +287,16 @@ export default function LeavesPage() {
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm font-medium text-foreground">
-                            {leaveTypeLabels[leave.type as keyof typeof leaveTypeLabels] ||
-                              leave.type}
-                          </span>
+                          <div
+                            className={`h-2 w-2 rounded-full ${
+                              leave.status === 'HR_APPROVED' || leave.status === 'MANAGER_APPROVED'
+                                ? 'bg-success'
+                                : leave.status === 'PENDING'
+                                ? 'bg-warning'
+                                : 'bg-destructive'
+                            }`}
+                          />
+                          <span>{leave.status.replace('_', ' ')}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
@@ -312,11 +313,11 @@ export default function LeavesPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
-                          className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium border ${
-                            statusColors[leave.status as keyof typeof statusColors]
+                          className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
+                            statusColors[leave.status] || 'bg-muted/10 text-muted-foreground'
                           }`}
                         >
-                          {leave.status}
+                          {leave.status.replace('_', ' ')}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-muted-foreground max-w-xs truncate">

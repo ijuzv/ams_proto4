@@ -10,16 +10,18 @@ import {
   Users,
   UserCircle,
   X,
+  CalendarClock  
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 
 const navigation = [
+  { name: 'Admin', href: '/admin', icon: Users, adminOnly: true },
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Attendance', href: '/attendance', icon: Clock },
   { name: 'Leaves', href: '/leaves', icon: Calendar },
-  { name: 'Admin', href: '/admin', icon: Users, adminOnly: true },
+  { name: 'Leave Requests', href: '/leave-requests', icon: CalendarClock, managerOnly: true },
   { name: 'Profile', href: '/profile', icon: UserCircle },
 ];
 
@@ -31,9 +33,11 @@ export function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname();
   const { user } = useAuth();
 
-  const filteredNavigation = navigation.filter(
-    (item) => !item.adminOnly || user?.role === 'ADMIN'
-  );
+  const filteredNavigation = navigation.filter((item) => {
+    if (item.adminOnly && user?.role !== 'ADMIN') return false;
+    if (item.managerOnly && user?.role !== 'MANAGER' && user?.role !== 'ADMIN') return false;
+    return true;
+  });
 
   return (
     <div className="flex h-full flex-col border-r border-border bg-white shadow-sm">

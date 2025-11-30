@@ -12,6 +12,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { MailerModule } from './mailer/mailer.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     LeavesModule,
     PrismaModule,
     MailerModule,
+    ScheduleModule.forRoot(),
   ],
   controllers: [AppController],
   providers: [
