@@ -9,78 +9,105 @@
             max-width: 600px;
             margin: 0 auto;
             padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background-color: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            overflow: hidden;
         }
         .header {
-            background-color: #4a6fa5;
-            color: white;
             padding: 20px;
             text-align: center;
-            border-radius: 5px 5px 0 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .header h2 {
+            margin: 0;
+            font-size: 20px;
+            color: #111827;
         }
         .content {
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-top: none;
-            border-radius: 0 0 5px 5px;
+            padding: 24px;
         }
         .status-approved {
-            color: #28a745;
-            font-weight: bold;
+            color: #16a34a;
+            font-weight: 600;
         }
         .status-rejected {
-            color: #dc3545;
-            font-weight: bold;
+            color: #dc2626;
+            font-weight: 600;
         }
         .status-pending {
-            color: #ffc107;
-            font-weight: bold;
+            color: #ca8a04;
+            font-weight: 600;
         }
         .details {
             margin: 20px 0;
-            padding: 15px;
-            background-color: #f8f9fa;
-            border-radius: 5px;
+            padding: 16px;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            background-color: #fafafa;
+        }
+        .details p {
+            margin: 6px 0;
         }
         .footer {
-            margin-top: 20px;
+            margin-top: 24px;
             font-size: 12px;
-            color: #6c757d;
+            color: #6b7280;
             text-align: center;
+            border-top: 1px solid #e5e7eb;
+            padding: 16px;
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h2>Your Leave Request Has Been {{#if (eq status "approved")}}Approved{{else if (eq status "rejected")}}Rejected{{else}}Updated{{/if}}</h2>
-    </div>
-    <div class="content">
-        <p>Hello {{employeeName}},</p>
-        
-        {{#if (eq status "approved")}}
-        <p>We're pleased to inform you that your leave request has been <span class="status-approved">approved</span>.</p>
-        {{else if (eq status "rejected")}}
-        <p>We regret to inform you that your leave request has been <span class="status-rejected">rejected</span>.</p>
-        {{else}}
-        <p>Your leave request status has been updated to: <span class="status-pending">{{status}}</span>.</p>
-        {{/if}}
-        
-        <div class="details">
-            <p><strong>Leave Type:</strong> {{leaveType}}</p>
-            <p><strong>From:</strong> {{fromDate}}</p>
-            <p><strong>To:</strong> {{toDate}}</p>
-            <p><strong>Reason:</strong> {{reason}}</p>
-            {{#if approverName}}
-            <p><strong>Action by:</strong> {{approverName}} ({{approverRole}})</p>
-            {{/if}}
-            {{#if comments}}
-            <p><strong>Comments:</strong> {{comments}}</p>
-            {{/if}}
+    <div class="container">
+        <div class="header">
+            <h2>
+                Leave Request
+                {{#if (eq status "approved")}}Approved
+                {{else if (eq status "rejected")}}Rejected
+                {{else}}Updated{{/if}}
+            </h2>
         </div>
-        
-        <p>You can view the details of your leave request by logging into the Leave Management System.</p>
-        
+
+        <div class="content">
+            <p>Hello {{employeeName}},</p>
+
+            {{#if message}}
+                <p>{{message}}</p>
+            {{else}}
+                {{#if (eq status "approved")}}
+                    <p>Your leave request has been <span class="status-approved">approved</span>.</p>
+                {{else if (eq status "rejected")}}
+                    <p>Your leave request has been <span class="status-rejected">rejected</span>.</p>
+                {{else}}
+                    <p>Your leave request status is now <span class="status-pending">{{status}}</span>.</p>
+                {{/if}}
+            {{/if}}
+
+            <div class="details">
+                <p><strong>Leave Type:</strong> {{leaveType}}</p>
+                <p><strong>From:</strong> {{fromDate}}</p>
+                <p><strong>To:</strong> {{toDate}}</p>
+                <p><strong>Reason:</strong> {{reason}}</p>
+
+                {{#if approverName}}
+                    <p><strong>Action by:</strong> {{approverName}} ({{approverRole}})</p>
+                {{/if}}
+
+                {{#if comments}}
+                    <p><strong>Comments:</strong> {{comments}}</p>
+                {{/if}}
+            </div>
+
+            <p>You can view full details by logging into the Leave Management System.</p>
+        </div>
+
         <div class="footer">
-            <p>This is an automated notification. Please do not reply to this email.</p>
+            <p>This is an automated notification. Please do not reply.</p>
             <p>&copy; {{currentYear}} Leave Management System</p>
         </div>
     </div>

@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -14,6 +14,13 @@ enum UserRole {
   USER
   ADMIN
   MANAGER
+  CEO
+}
+
+enum UserGender {
+  MALE
+  FEMALE
+  OTHER
 }
 
 enum AttendanceStatus {
@@ -21,8 +28,11 @@ enum AttendanceStatus {
   WFH
   CL
   SL
+  EL
   COMP_OFF
   AB
+  OL
+  ML
 }
 
 enum LeaveStatus {
@@ -40,29 +50,40 @@ enum LeaveType {
   EARNED
   COMP_OFF
   LOP
+  OPTIONAL
 }
 
 model User {
-  id           Int          @id @default(autoincrement())
-  email        String       @unique
-  password     String
-  name         String
-  role         UserRole     @default(USER)
-  managerId    Int?
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  attendances  Attendance[]
+  id            Int            @id @default(autoincrement())
+  email         String         @unique
+  password      String
+  name          String
+  gender        UserGender?
+  role          UserRole       @default(USER)
+  managerId     Int?
+  manager       User?          @relation("UserManager", fields: [managerId], references: [id])
+  subordinates  User[]         @relation("UserManager")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  attendances   Attendance[]
   leaveRequests LeaveRequest[]
+  active        Boolean        @default(true)
+  designation   String?
+  shift         String?
+  team          String?
+  avatar        String?
+  joiningDate   DateTime?      @db.Date
+  leaveBalances LeaveBalance[]
 }
 
 model Attendance {
-  id        Int             @id @default(autoincrement())
+  id        Int              @id @default(autoincrement())
   userId    Int
-  user      User            @relation(fields: [userId], references: [id])
-  date      DateTime
+  user      User             @relation(fields: [userId], references: [id])
+  date      DateTime         @db.Date
   status    AttendanceStatus
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
 
   @@unique([userId, date])
   @@index([userId], name: "attendance_userId_idx")
@@ -71,22 +92,47 @@ model Attendance {
 }
 
 model LeaveRequest {
-  id          Int         @id @default(autoincrement())
-  userId      Int
-  user        User        @relation(fields: [userId], references: [id])
-  type        LeaveType
-  fromDate    DateTime
-  toDate      DateTime
-  reason      String
-  status      LeaveStatus @default(PENDING)
-  approvedBy  Int?
-  approvedAt  DateTime?
-  rejectedAt  DateTime?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id         Int         @id @default(autoincrement())
+  userId     Int
+  user       User        @relation(fields: [userId], references: [id])
+  type       LeaveType
+  fromDate   DateTime    @db.Date
+  toDate     DateTime    @db.Date
+  reason     String
+  status     LeaveStatus @default(PENDING)
+  approvedBy Int?
+  approvedAt DateTime?
+  rejectedAt DateTime?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
 
   @@index([status], name: "leave_request_status_idx")
   @@index([userId], name: "leave_request_userId_idx")
+}
+
+model LeaveBalance {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  year      Int
+  clBalance Float    @default(0) // Casual Leave
+  slBalance Float    @default(0) // Sick Leave
+  elBalance Float    @default(0) // Earned Leave
+  olBalance Float    @default(0) // Optional Leave
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, year])
+}
+
+model Holiday {
+  id          Int      @id @default(autoincrement())
+  date        DateTime @unique @db.Date
+  name        String
+  description String?
+  isMandatory Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 // Indexes are now defined within their respective models

@@ -20,4 +20,8 @@ export class CreateUserDto {
   @IsInt()
   @IsOptional()
   managerId?: number | null;
+
+  @IsString()
+  @IsOptional()
+  avatar?: string;
 }

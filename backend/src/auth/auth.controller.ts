@@ -25,6 +25,7 @@ export class AuthController {
       registerDto.password,
       registerDto.role,
       registerDto.managerId,
+      registerDto.avatar,
     );
     return { message: 'User registered successfully', user };
   }
@@ -35,8 +36,8 @@ export class AuthController {
   @ApiOperation({ summary: 'Login user' })
   @ApiResponse({ status: 201, description: 'User successfully logged in' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async login(@Body() _loginDto: LoginDto, @Req() req: { user: User }) {
-    return this.authService.login(req.user);
+  async login(@Body() loginDto: LoginDto, @Req() req: { user: User }) {
+    return this.authService.login(req.user, loginDto.rememberMe ?? false);
   }
 
   @UseGuards(JwtAuthGuard)

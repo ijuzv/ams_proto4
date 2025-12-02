@@ -50,3 +50,14 @@ export function getStatusBadgeColor(status: string): string {
       return 'bg-muted text-muted-foreground';
   }
 }
+
+export function getDiceBearAvatar(name: string, gender?: string | null): string {
+  const style = gender === 'FEMALE' ? 'avataaars' : gender === 'MALE' ? 'male' : 'avataaars';
+  const seed = name.toLowerCase().replace(/\s+/g, '');
+  return `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}`;
+}
+
+export function truncateText(text: string | null | undefined, maxLength: number = 20): string {
+  if (!text) return '-';
+  return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
+}

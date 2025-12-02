@@ -4,11 +4,13 @@ import { LeavesController } from './leaves.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { MailerModule } from '../mailer/mailer.module';
 import { UsersModule } from '../users/users.module';
+import { AttendanceModule } from 'src/attendance/attendance.module';
+import { HolidaysModule } from '../holidays/holidays.module';
 
 @Module({
-  imports: [PrismaModule, MailerModule, UsersModule],
+  imports: [PrismaModule, MailerModule, UsersModule, AttendanceModule, HolidaysModule],
   providers: [LeavesService],
   controllers: [LeavesController],
   exports: [LeavesService],
 })
-export class LeavesModule {}
+export class LeavesModule { }

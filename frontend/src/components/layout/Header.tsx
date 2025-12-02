@@ -46,7 +46,7 @@ export function Header({ onMenuClick }: HeaderProps) {
             <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-destructive"></span>
           </Button>
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+            <DropdownMenuTrigger>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                 <Avatar className="h-8 w-8">
                   <AvatarImage src="/avatars/01.png" alt="User" />

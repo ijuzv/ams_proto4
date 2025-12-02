@@ -19,6 +19,14 @@ export class MailerService {
   private transporter: nodemailer.Transporter;
 
   constructor() {
+    // Register Handlebars helpers
+    handlebars.registerHelper('eq', (a, b) => a === b);
+    handlebars.registerHelper('ne', (a, b) => a !== b);
+    handlebars.registerHelper('gt', (a, b) => a > b);
+    handlebars.registerHelper('lt', (a, b) => a < b);
+    handlebars.registerHelper('gte', (a, b) => a >= b);
+    handlebars.registerHelper('lte', (a, b) => a <= b);
+
     this.transporter = nodemailer.createTransport({
       host: process.env.MAIL_HOST,
       port: parseInt(process.env.MAIL_PORT || '587'),
@@ -42,11 +50,25 @@ export class MailerService {
       // If template is provided, try to load and compile it
       if (template) {
         try {
-          const templatePath = path.join(
+          // Try dist folder first (production), then src folder (development)
+          const distTemplatePath = path.join(
             __dirname,
             'templates',
             `${template}.hbs`
           );
+          
+          const srcTemplatePath = path.join(
+            process.cwd(),
+            'src',
+            'mailer',
+            'templates',
+            `${template}.hbs`
+          );
+          
+          let templatePath = distTemplatePath;
+          if (!fs.existsSync(templatePath)) {
+            templatePath = srcTemplatePath;
+          }
           
           if (fs.existsSync(templatePath)) {
             const templateContent = fs.readFileSync(templatePath, 'utf-8');
@@ -55,8 +77,9 @@ export class MailerService {
               ...context,
               currentYear: new Date().getFullYear(),
             });
+            this.logger.log(`Template loaded from: ${templatePath}`);
           } else {
-            this.logger.warn(`Template file not found: ${templatePath}`);
+            this.logger.warn(`Template file not found in either location. Tried: ${distTemplatePath} and ${srcTemplatePath}`);
           }
         } catch (error) {
           this.logger.error(`Error loading template: ${error.message}`, error.stack);

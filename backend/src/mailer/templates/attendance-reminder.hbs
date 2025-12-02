@@ -9,65 +9,85 @@
             max-width: 600px;
             margin: 0 auto;
             padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background-color: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            overflow: hidden;
         }
         .header {
-            background-color: #ffc107;
-            color: #333;
             padding: 20px;
             text-align: center;
-            border-radius: 5px 5px 0 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .header h2 {
+            margin: 0;
+            font-size: 20px;
+            color: #111827;
         }
         .content {
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-top: none;
-            border-radius: 0 0 5px 5px;
+            padding: 24px;
         }
         .reminder {
-            background-color: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 15px;
-            margin: 15px 0;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            padding: 16px;
+            margin: 16px 0;
+            background-color: #fafafa;
+        }
+        .reminder p {
+            margin: 6px 0;
         }
         .button {
             display: inline-block;
-            padding: 10px 20px;
-            background-color: #4a6fa5;
-            color: white;
+            padding: 12px 24px;
+            background-color: #2563eb;
+            color: #ffffff !important;
             text-decoration: none;
-            border-radius: 5px;
-            margin: 10px 0;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .button:hover {
+            background-color: #1d4ed8;
         }
         .footer {
-            margin-top: 20px;
+            margin-top: 24px;
             font-size: 12px;
-            color: #6c757d;
+            color: #6b7280;
             text-align: center;
+            border-top: 1px solid #e5e7eb;
+            padding: 16px;
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h2>Attendance Reminder</h2>
-    </div>
-    <div class="content">
-        <p>Hello {{employeeName}},</p>
-        
-        <div class="reminder">
-            <p><strong>Reminder:</strong> You haven't marked your attendance for today yet.</p>
-            <p>Current time: {{currentTime}}</p>
+    <div class="container">
+        <div class="header">
+            <h2>Attendance Reminder</h2>
         </div>
-        
-        <p>Please mark your attendance as soon as possible to ensure accurate records.</p>
-        
-        <p>
-            <a href="{{attendanceLink}}" class="button">Mark Attendance Now</a>
-        </p>
-        
-        <p>If you have already marked your attendance, please ignore this reminder.</p>
-        
+
+        <div class="content">
+            <p>Hello {{employeeName}},</p>
+
+            <div class="reminder">
+                <p><strong>Attendance not marked</strong></p>
+                <p>As of {{currentTime}}, your attendance for today is still pending.</p>
+            </div>
+
+            <p>Please mark your attendance at your earliest convenience to keep records accurate.</p>
+
+            <p>
+                <a href="{{attendanceLink}}" class="button">Mark Attendance</a>
+            </p>
+
+            <p>If you have already completed this action, you may safely ignore this message.</p>
+        </div>
+
         <div class="footer">
-            <p>This is an automated reminder. Please do not reply to this email.</p>
+            <p>This is an automated notification. Please do not reply.</p>
             <p>&copy; {{currentYear}} Leave Management System</p>
         </div>
     </div>

@@ -1,18 +1,22 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { motion } from 'framer-motion';
 import { User, Mail, Shield, Calendar, Edit2, Save, X } from 'lucide-react';
-import { useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { toast } from '@/components/ui/use-toast';
-import { usersApi } from '@/lib/api';
+import { authApi, usersApi } from '@/lib/api';
+import { UserAvatar } from '@/components/avatar/UserAvatar';
+import { AvatarPicker } from '@/components/avatar/AvatarPicker';
 
 export default function ProfilePage() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -23,6 +27,7 @@ export default function ProfilePage() {
   const [isMatch, setIsMatch] = useState<boolean | null>(null);
   const [cnfrmNewPassword, setCnfrmNewPassword] = useState('');
   const [error, setError] = useState('');
+  const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -32,11 +37,55 @@ export default function ProfilePage() {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleNameChange = (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Update profile
+    updateUserMutation .mutate({ name: formData.name });
     setIsEditing(false);
   };
+
+   const { data: userProfile } = useQuery({
+    queryKey: ['user'],
+    queryFn: () => authApi.getProfile(), // Make sure this function exists in your API
+    initialData: user,
+  });
+
+  const [selectedAvatar, setSelectedAvatar] = useState<string | null>(
+    userProfile && typeof userProfile === 'object' && 'avatar' in userProfile
+      ? (userProfile as { avatar?: string }).avatar ?? null
+      : null
+  );
+
+  // Update selectedAvatar when userProfile changes
+
+  useEffect(() => {
+    if (
+      userProfile &&
+      typeof userProfile === 'object' &&
+      'avatar' in userProfile
+    ) {
+      // @ts-expect-error: userProfile typed as unknown, but should have 'avatar'
+      setSelectedAvatar(userProfile.avatar);
+    }
+  }, [userProfile]);
+
+  const updateUserMutation  = useMutation({
+    mutationFn: (data: { name: string }) => usersApi.updateUser(data),
+    onSuccess: () => {
+      toast({
+        title: 'Success!',
+        description: 'Profile Updated Successfully.',
+        variant: 'success',
+      });
+      queryClient.invalidateQueries({ queryKey: ['user'] });
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to Update Profile.',
+        variant: 'destructive',
+      });
+    },
+  });
 
   const changePasswordMutation = useMutation({
     mutationFn: (data: { currentPassword: string, newPassword: string }) => usersApi.changePassword(data),
@@ -55,6 +104,43 @@ export default function ProfilePage() {
       });
     },
   });
+
+  const updateAvatarMutation = useMutation({
+    mutationFn: (avatar: string) => usersApi.updateAvatar(avatar),
+    onSuccess: async () => {
+      toast({
+        title: 'Success!',
+        description: 'Avatar Updated Successfully.',
+        variant: 'success',
+      });
+      // Refresh user profile and auth context
+      await queryClient.invalidateQueries({ queryKey: ['user'] });
+      const updatedProfile = await authApi.getProfile();
+      // Fix: add type assertion to avoid TS error about unknown
+      const newAvatar = (updatedProfile as { avatar?: string | null }).avatar || null;
+      setSelectedAvatar(newAvatar);
+      setIsAvatarDialogOpen(false);
+      // Force a page refresh to update all components
+      window.location.reload();
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to Update Avatar.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleAvatarSelect = (avatarUrl: string) => {
+    setSelectedAvatar(avatarUrl);
+  };
+
+  const handleAvatarSave = () => {
+    if (selectedAvatar) {
+      updateAvatarMutation.mutate(selectedAvatar);
+    }
+  };
 
   if (!user) return null;
 
@@ -84,7 +170,7 @@ export default function ProfilePage() {
     },
   ];
 
-  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>, type: string) => {
+  const handlePassChange = (e: React.ChangeEvent<HTMLInputElement>, type: string) => {
     const value = e.target.value;
     if (type === "oldPass") {
       setOldPassword(value)
@@ -125,12 +211,12 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 w-full pb-8">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex justify-between items-center pb-6 border-b border-border"
+        className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 border-b border-border"
       >
         <div>
           <h1 className="text-3xl font-bold text-foreground">Profile</h1>
@@ -144,6 +230,47 @@ export default function ProfilePage() {
             Edit Profile
           </Button>
         )}
+      </motion.div>
+
+      {/* Avatar Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+        className="rounded-2xl border border-border bg-white shadow-sm overflow-hidden"
+      >
+        <div className="px-6 py-5 border-b border-border bg-white">
+          <h2 className="text-lg font-semibold text-foreground">
+            Profile Avatar
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Choose an avatar to represent yourself
+          </p>
+        </div>
+        <div className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
+            <UserAvatar
+              avatar={(userProfile as { avatar?: string })?.avatar}
+              name={user?.name}
+              size="xl"
+            />
+            <div className="flex-1">
+              <p className="text-sm text-muted-foreground mb-4">
+                Click the button below to change your avatar
+              </p>
+              <Button
+                onClick={() => {
+                  setSelectedAvatar((userProfile as { avatar?: string })?.avatar || null);
+                  setIsAvatarDialogOpen(true);
+                }}
+                variant="outline"
+              >
+                <Edit2 className="mr-2 h-4 w-4" />
+                Change Avatar
+              </Button>
+            </div>
+          </div>
+        </div>
       </motion.div>
 
       {/* Profile Information Card */}
@@ -163,7 +290,7 @@ export default function ProfilePage() {
         </div>
 
         {isEditing ? (
-          <form onSubmit={handleSubmit} className="p-6">
+          <form onSubmit={handleNameChange} className="p-6">
             <div className="grid gap-6">
               {infoItems
                 .filter((item) => item.field)
@@ -252,7 +379,7 @@ export default function ProfilePage() {
           </p>
         </div>
         <div className="p-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleNameChange} className="space-y-4">
             <div>
               <label htmlFor="current-password" className="block text-sm font-medium text-gray-700">
                 Current Password
@@ -263,7 +390,7 @@ export default function ProfilePage() {
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
                 name="current-password"
                 required
-                onChange={(e) => handleNameChange(e, 'oldPass')}
+                onChange={(e) => handlePassChange(e, 'oldPass')}
               />
             </div>
 
@@ -277,7 +404,7 @@ export default function ProfilePage() {
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
                 name="new-password"
                 required
-                onChange={(e) => handleNameChange(e, 'newPass')}
+                onChange={(e) => handlePassChange(e, 'newPass')}
               />
             </div>
 
@@ -325,6 +452,50 @@ export default function ProfilePage() {
           </form>
         </div>
       </motion.div>
+
+      {/* Avatar Picker Dialog */}
+      <Dialog open={isAvatarDialogOpen} onOpenChange={setIsAvatarDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle {...({} as any)}>Change Avatar</DialogTitle>
+            <DialogDescription {...({} as any)}>
+              Select a new avatar from the options below
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <AvatarPicker
+              selectedAvatar={selectedAvatar}
+              onSelect={handleAvatarSelect}
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsAvatarDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAvatarSave}
+              disabled={updateAvatarMutation.isPending}
+            >
+              {updateAvatarMutation.isPending ? 'Saving...' : 'Save Avatar'}
+            </Button>
+            {selectedAvatar && (
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  setSelectedAvatar(null);
+                  updateAvatarMutation.mutate('');
+                }}
+                disabled={updateAvatarMutation.isPending}
+              >
+                Clear Avatar
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

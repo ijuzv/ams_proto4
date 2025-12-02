@@ -27,4 +27,13 @@ export class RegisterDto {
   @IsInt()
   @IsOptional()
   managerId?: number;
+
+  @ApiProperty({ 
+    example: 'https://api.dicebear.com/7.x/avataaars/svg?seed=abc123',
+    required: false,
+    description: 'Full DiceBear avatar URL'
+  })
+  @IsString()
+  @IsOptional()
+  avatar?: string;
 }
