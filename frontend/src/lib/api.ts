@@ -82,31 +82,61 @@ export const api = new ApiClient();
 
 // Auth API
 export const authApi = {
-  login: (email: string, password: string) =>
+  login: (email: string, password: string, rememberMe?: boolean) =>
     api.post<{ access_token: string; user: any }>("/auth/login", {
       email,
       password,
+      rememberMe,
     }),
-  register: (name: string, email: string, password: string) =>
-    api.post("/auth/register", { name, email, password }),
+  register: (name: string, email: string, password: string, avatar?: string) =>
+    api.post("/auth/register", { name, email, password, avatar }),
   getProfile: () => api.get("/auth/me"),
   logout: () => api.post("/auth/logout"),
 };
 
+export const adminDashboardApi = {
+  getStats: () => api.get('/admin-dashboard/stats'),
+  getTrends: (period: string) => api.get(`/admin-dashboard/trends?period=${period}`),
+  getActivity: () => api.get('/admin-dashboard/activity'),
+};
+
 // Users API
 export const usersApi = {
-  getAll: () => api.get("/users"),
+  getAll: (data: { page: number; limit: number, search: string }) =>
+    api.get("/users", {
+      params: {
+        page: data.page,
+        limit: data.limit,
+        search: data.search,
+      },
+    }),
+  updateUser: (data: { name: string }) =>
+    api.put(`/users/editProfile`, data),
   getById: (id: number) => api.get(`/users/${id}`),
-  updateRole: (id: number, role: "USER" | "ADMIN") =>
-    api.patch(`/users/${id}/role`, { role }),
-  delete: (id: number) => api.delete(`/users/${id}`),
-  changePassword: (data: {currentPassword: string, newPassword: string}) =>
+  update: (variables: { id: number; email: string; role: 'USER' | 'MANAGER' | 'ADMIN'; managerId?: number | null, avatar?: string }) =>
+    api.put(`/users/${variables.id}/update`, {
+      email: variables.email,
+      role: variables.role,
+      managerId: variables.managerId ?? null,
+    }),
+  delete: (id: number) => api.delete(`/users/${id}/delete`),
+  changePassword: (data: { currentPassword: string, newPassword: string }) =>
     api.put(`/users/password-change`, data),
+  create: (data: {
+    name: string;
+    email: string;
+    password: string;
+    role?: "USER" | "MANAGER" | "ADMIN";
+    managerId?: number | null;
+    avatar?: string;
+  }) => api.post("/users", data),
+  getManagers: () => api.get("/users/managers"),
+  updateAvatar: (avatar: string) => api.put("/users/avatar", { avatar }),
 };
 
 // Attendance API
 export const attendanceApi = {
-  mark: (data: { status: "WFO" | "WFH" | "CL" | "SL" | "COMP_OFF" | "AB" }) =>
+  mark: (data: { status: "WFO" | "WFH" | "CL" | "SL" | "EL" | "COMP_OFF" | "AB" | "OL" | "ML" }) =>
     api.post("/attendance/mark", data),
   getMyAttendance: (month?: number, year?: number) => {
     const params: { month?: number; year?: number } = {};
@@ -117,26 +147,43 @@ export const attendanceApi = {
   getSummary: () => api.get("/attendance/summary"),
   getByDate: (date: string) =>
     api.get("/attendance/date", { params: { date } }),
+  getAll: (params: {
+    page: number;
+    limit: number;
+    search?: string;
+    status?: string;
+    date?: string;
+  }): Promise<{
+    data: any[];
+    meta: { total: number; page: number; limit: number; totalPages: number };
+  }> => api.get("/attendance/list", { params }),
+  adminMarkAttendance: (data: {
+    userId: number;
+    date: string;
+    status: "WFO" | "WFH" | "CL" | "SL" | "EL" | "COMP_OFF" | "AB" | "OL" | "ML";
+  }) => api.post("/attendance/admin/mark", data),
 };
 
 // Leaves API
 export const leavesApi = {
+  getAll: (params: any) => api.get("/leaves/list", { params }),
   apply: (data: {
-    type: "SICK" | "CASUAL" | "EARNED" | "COMP_OFF" | "LOP";
+    type: "SICK" | "CASUAL" | "EARNED" | "COMP_OFF" | "LOP" | "OPTIONAL";
     fromDate: string;
     toDate: string;
     reason: string;
   }) => api.post("/leaves/apply", data),
 
-  getMyLeaves: () => api.get("/leaves/my-leaves"),
+  getMyLeaves: (params: any) =>
+    api.get("/leaves/my-leaves", { params }),
 
   getPendingLeaves: () => api.get("/leaves/all"),
 
-  getApprovedLeaves: (params: { type: "approvedLeaves" }) =>
+  getApprovedLeaves: (params: { type: "MANAGER_APPROVED" }) =>
     api.get("/leaves/all", { params }),
 
-  getManagerApprovalLeaves: (managerId: number) =>
-    api.get(`/leaves/requests?managerId=${managerId}`),
+  getManagerApprovalLeaves: (params: any) =>
+    api.get(`/leaves/requests?managerId=${params?.managerId}`, { params }),
 
   getLeavesByUser: (userId: number) => api.get(`/leaves/user/${userId}`),
 
@@ -150,6 +197,15 @@ export const leavesApi = {
   rejectManagerLeave: (id: number) => api.post(`/leaves/manager-reject/${id}`),
 
   cancelLeave: (id: number) => api.delete(`/leaves/cancel/${id}`),
+  getBalance: () => api.get("/leaves/balance"),
+  revokeLeave: (id: number) => api.post(`/leaves/revoke/${id}`),
+  getRecentActivity: () => api.get("/leaves/recent-activity"),
+  requestCancellation: (id: number, reason: string) => api.post(`/leaves/${id}/request-cancellation`, { reason }),
+  approveCancellation: (id: number) => api.post(`/leaves/${id}/approve-cancellation`),
+  rejectCancellation: (id: number, comments?: string) => api.post(`/leaves/${id}/reject-cancellation`, { comments }),
+  getAdminLeaveRequests: (params: any) => api.get("/leaves/admin-requests", { params }),
+  approveAdminLeave: (id: number) => api.post(`/leaves/ceo-approve/${id}`),
+  rejectAdminLeave: (id: number, comments?: string) => api.post(`/leaves/ceo-reject/${id}`, { comments }),
 };
 
 // Reports API
@@ -166,4 +222,11 @@ export const reportsApi = {
     endDate: string;
     status?: "PENDING" | "APPROVED" | "REJECTED";
   }) => api.get("/reports/leaves", { params }),
+};
+
+// Team API
+export const teamApi = {
+  getTree: (mode: 'FULL' | 'MY_TEAM') =>
+    api.get(mode === 'FULL' ? '/team/tree' : '/team/my-team'),
+  getStatus: () => api.get('/team/status/today'),
 };

@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/contexts/auth-context';
 import { useQuery } from '@tanstack/react-query';
-import { attendanceApi } from '@/lib/api';
+import { attendanceApi, leavesApi } from '@/lib/api';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import { 
@@ -54,6 +54,11 @@ export default function DashboardPage() {
     queryFn: () => attendanceApi.getSummary() as Promise<AttendanceSummary>,
   });
 
+  const { data: recentActivity } = useQuery({
+    queryKey: ['recent-activity'],
+    queryFn: () => leavesApi.getRecentActivity() as Promise<ActivityItem[]>,
+  });
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -97,7 +102,7 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-8">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -132,7 +137,7 @@ export default function DashboardPage() {
                   <p className="text-sm font-medium text-muted-foreground">
                     {stat.name}
                   </p>
-                  <p className="mt-2 text-3xl font-bold text-foreground">
+                  <p className={`mt-2  font-bold text-foreground ${stat.name === 'Leave Balance' ? 'text-2xl' : 'text-3xl'}`}>
                     {stat.value}
                   </p>
                 </div>
@@ -162,8 +167,8 @@ export default function DashboardPage() {
           </div>
         </div>
         <div className="divide-y divide-border">
-          {summary?.recentActivity && summary.recentActivity.length > 0 ? (
-            summary.recentActivity.map((activity: ActivityItem, index: number) => (
+          {recentActivity && recentActivity.length > 0 ? (
+            recentActivity.map((activity: ActivityItem, index: number) => (
               <motion.div
                 key={activity.id}
                 initial={{ opacity: 0, x: -20 }}
@@ -188,7 +193,7 @@ export default function DashboardPage() {
                   <div className="text-right">
                     <span
                       className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
-                        activity.status === 'APPROVED'
+                        activity.status === 'MANAGER_APPROVED' || activity.status === 'HR_APPROVED'
                           ? 'bg-success/10 text-success'
                           : activity.status === 'PENDING'
                           ? 'bg-warning/10 text-warning'

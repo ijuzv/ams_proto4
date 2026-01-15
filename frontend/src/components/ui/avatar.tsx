@@ -7,6 +7,7 @@ const Avatar = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Root> & {
     className?: string
+    children?: React.ReactNode
   }
 >(({ className, ...props }, ref) => (
   <AvatarPrimitive.Root
@@ -24,7 +25,7 @@ const AvatarImage = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Image>,
   React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image> & {
     className?: string
-  }
+  } & React.ImgHTMLAttributes<HTMLImageElement>
 >(({ className, ...props }, ref) => (
   <AvatarPrimitive.Image
     ref={ref}
@@ -40,7 +41,7 @@ const AvatarFallback = React.forwardRef<
     className?: string
     children?: React.ReactNode
   }
->(({ className, children, ...props }, ref) => (
+>(({ className, ...props }, ref) => (
   <AvatarPrimitive.Fallback
     ref={ref}
     className={cn(
@@ -48,9 +49,7 @@ const AvatarFallback = React.forwardRef<
       className
     )}
     {...(props as any)}
-  >
-    {children}
-  </AvatarPrimitive.Fallback>
+  />
 ))
 AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName
 

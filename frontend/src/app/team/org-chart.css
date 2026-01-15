@@ -1,0 +1,31 @@
+@layer utilities {
+  .org-tree-container {
+    @apply flex flex-col items-center;
+  }
+  
+  .org-tree-node {
+    @apply flex flex-col items-center relative;
+  }
+  
+  .org-tree-children {
+    @apply flex gap-8 mt-8 relative;
+  }
+  
+  /* Connector Lines */
+  .org-tree-children::before {
+    content: '';
+    @apply absolute top-[-16px] left-0 right-0 h-px bg-gray-300;
+    /* Only span somewhat centered if we want lines to connect siblings */
+  }
+
+  /* Vertical line from parent to children-bar */
+  .org-tree-node::after {
+    content: '';
+    @apply w-px h-8 bg-gray-300 absolute -bottom-8;
+  }
+  
+  /* Hide vertical line for leaf nodes */
+  .org-tree-node:last-child::after {
+    /* logic needed here */
+  }
+}

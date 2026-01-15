@@ -13,6 +13,11 @@ import { MailerModule } from './mailer/mailer.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { ScheduleModule } from '@nestjs/schedule';
+import { MigrationModule } from './migration/migration.module';
+import { ExportModule } from './export/export.module';
+import { AdminDashboardModule } from './admin-dashboard/admin-dashboard.module';
+import { TeamModule } from './team/team.module';
+import { HolidaysModule } from './holidays/holidays.module';
 
 @Module({
   imports: [
@@ -28,9 +33,14 @@ import { ScheduleModule } from '@nestjs/schedule';
     UsersModule,
     AttendanceModule,
     LeavesModule,
+    MigrationModule,
     PrismaModule,
     MailerModule,
     ScheduleModule.forRoot(),
+    ExportModule,
+    AdminDashboardModule,
+    TeamModule,
+    HolidaysModule,
   ],
   controllers: [AppController],
   providers: [
@@ -45,4 +55,4 @@ import { ScheduleModule } from '@nestjs/schedule';
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }

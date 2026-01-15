@@ -1,6 +1,6 @@
-export type LeaveStatus = 'PENDING' | 'MANAGER_APPROVED' | 'MANAGER_REJECTED' | 'HR_APPROVED' | 'HR_REJECTED' | 'CANCELLED';
+export type LeaveStatus = 'PENDING' | 'MANAGER_APPROVED' | 'MANAGER_REJECTED' | 'HR_APPROVED' | 'HR_REJECTED' | 'CANCELLED' | 'CANCELLATION_REQUESTED';
 
-export type LeaveType = 'SICK' | 'CASUAL' | 'EARNED' | 'COMP_OFF' | 'LOP';
+export type LeaveType = 'SICK' | 'CASUAL' | 'EARNED' | 'COMP_OFF' | 'LOP' | 'OPTIONAL';
 
 export interface Leave {
   id: number;

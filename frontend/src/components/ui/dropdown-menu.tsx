@@ -79,8 +79,10 @@ const DropdownMenuItem = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Item> & {
     inset?: boolean
     className?: string
+    children?: React.ReactNode
+    onClick?: (event: React.MouseEvent<HTMLDivElement>) => void
   }
->(({ className, inset, ...props }, ref) => (
+>(({ className, inset, children, ...props }, ref) => (
   <DropdownMenuPrimitive.Item
     ref={ref}
     className={cn(
@@ -89,7 +91,9 @@ const DropdownMenuItem = React.forwardRef<
       className
     )}
     {...(props as any)}
-  />
+  >
+    {children}
+  </DropdownMenuPrimitive.Item>
 ))
 DropdownMenuItem.displayName = DropdownMenuPrimitive.Item.displayName
 
@@ -150,8 +154,9 @@ const DropdownMenuLabel = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Label> & {
     inset?: boolean
     className?: string
+    children?: React.ReactNode
   }
->(({ className, inset, ...props }, ref) => (
+>(({ className, inset, children, ...props }, ref) => (
   <DropdownMenuPrimitive.Label
     ref={ref}
     className={cn(
@@ -160,7 +165,9 @@ const DropdownMenuLabel = React.forwardRef<
       className
     )}
     {...(props as any)}
-  />
+  >
+    {children}
+  </DropdownMenuPrimitive.Label>
 ))
 DropdownMenuLabel.displayName = DropdownMenuPrimitive.Label.displayName
 

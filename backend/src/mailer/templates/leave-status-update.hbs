@@ -9,66 +9,82 @@
             max-width: 600px;
             margin: 0 auto;
             padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background-color: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            overflow: hidden;
         }
         .header {
-            background-color: #4a6fa5;
-            color: white;
             padding: 20px;
             text-align: center;
-            border-radius: 5px 5px 0 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .header h2 {
+            margin: 0;
+            font-size: 20px;
+            color: #111827;
         }
         .content {
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-top: none;
-            border-radius: 0 0 5px 5px;
+            padding: 24px;
         }
         .status-approved {
-            color: #28a745;
-            font-weight: bold;
+            color: #16a34a;
+            font-weight: 600;
         }
         .status-rejected {
-            color: #dc3545;
-            font-weight: bold;
+            color: #dc2626;
+            font-weight: 600;
         }
         .details {
             margin: 20px 0;
-            padding: 15px;
-            background-color: #f8f9fa;
-            border-radius: 5px;
+            padding: 16px;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            background-color: #fafafa;
+        }
+        .details p {
+            margin: 6px 0;
         }
         .footer {
-            margin-top: 20px;
+            margin-top: 24px;
             font-size: 12px;
-            color: #6c757d;
+            color: #6b7280;
             text-align: center;
+            border-top: 1px solid #e5e7eb;
+            padding: 16px;
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h2>Leave Request Update</h2>
-    </div>
-    <div class="content">
-        <p>Hello <strong>{{userName}}</strong>,</p>
-        
-        {{#if (or (eq status "approved") (eq status "MANAGER_APPROVED") (eq status "HR_APPROVED"))}}
-        <p>Your leave request has been <span class="status-approved">approved</span>.</p>
-        {{else}}
-        <p>Your leave request has been <span class="status-rejected">rejected</span>.</p>
-        {{/if}}
-        
-        <div class="details">
-            <p><strong>Leave Type:</strong> {{leaveType}}</p>
-            <p><strong>From:</strong> {{fromDate}}</p>
-            <p><strong>To:</strong> {{toDate}}</p>
-            <p><strong>Status:</strong> {{status}}</p>
+    <div class="container">
+        <div class="header">
+            <h2>Leave Request Update</h2>
         </div>
-        
-        <p>If you have any questions, please contact your HR department.</p>
-        
+
+        <div class="content">
+            <p>Hello <strong>{{userName}}</strong>,</p>
+
+            {{#if (or (eq status "approved") (eq status "MANAGER_APPROVED") (eq status "HR_APPROVED"))}}
+                <p>Your leave request has been <span class="status-approved">approved</span>.</p>
+            {{else}}
+                <p>Your leave request has been <span class="status-rejected">rejected</span>.</p>
+            {{/if}}
+
+            <div class="details">
+                <p><strong>Leave Type:</strong> {{leaveType}}</p>
+                <p><strong>From:</strong> {{fromDate}}</p>
+                <p><strong>To:</strong> {{toDate}}</p>
+                <p><strong>Status:</strong> {{status}}</p>
+            </div>
+
+            <p>If you have any questions, please contact your HR department.</p>
+        </div>
+
         <div class="footer">
-            <p>This is an automated message. Please do not reply to this email.</p>
+            <p>This is an automated message. Please do not reply.</p>
             <p>&copy; {{currentYear}} Leave Management System. All rights reserved.</p>
         </div>
     </div>

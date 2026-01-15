@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-type AttendanceStatus = 'WFO' | 'WFH' | 'CL' | 'SL' | 'COMP_OFF' | 'AB';
+type AttendanceStatus = 'WFO' | 'WFH' | 'CL' | 'SL' | 'EL' | 'COMP_OFF' | 'AB' | 'OL' | 'ML';
 
 interface AttendanceRecord {
   id: string | number;
@@ -24,13 +24,29 @@ interface AttendanceRecord {
   status: AttendanceStatus;
 }
 
+interface Holiday {
+  id: number;
+  date: string;
+  name: string;
+  description?: string;
+  isMandatory: boolean;
+}
+
+interface AttendanceResponse {
+  attendances?: AttendanceRecord[];
+  holidays?: Holiday[];
+}
+
 const statusConfig = {
   WFO: { label: 'Work From Office', color: 'bg-amber-100 text-amber-700 border-amber-200', badge: 'bg-amber-500' },
   WFH: { label: 'Work From Home', color: 'bg-emerald-100 text-emerald-700 border-emerald-200', badge: 'bg-emerald-500' },
-  CL: { label: 'Casual Leave', color: 'bg-blue-100 text-blue-700 border-blue-200', badge: 'bg-blue-500' },
+  CL: { label: 'Casual Leave', color: 'bg-cyan-100 text-cyan-700 border-cyan-200', badge: 'bg-cyan-500' },
   SL: { label: 'Sick Leave', color: 'bg-rose-100 text-rose-700 border-rose-200', badge: 'bg-rose-500' },
+  EL: { label: 'Earned Leave', color: 'bg-orange-100 text-orange-700 border-orange-200', badge: 'bg-orange-500' },
   COMP_OFF: { label: 'Compensatory Off', color: 'bg-purple-100 text-purple-700 border-purple-200', badge: 'bg-purple-500' },
-  AB: { label: 'Absent', color: 'bg-gray-100 text-gray-700 border-gray-200', badge: 'bg-gray-500' },
+  AB: { label: 'Absent', color: 'bg-red-200 text-red-800 border-red-300', badge: 'bg-red-600' },
+  OL: { label: 'Optional Leave', color: 'bg-sky-100 border-sky-300 text-sky-700', badge: 'bg-sky-500' },
+  ML: { label: 'Mandatory Leave', color: 'bg-slate-100 border-slate-300 text-slate-700', badge: 'bg-indigo-500' },
 };
 
 export default function AttendancePage() {
@@ -47,14 +63,22 @@ export default function AttendancePage() {
   const firstDayOfWeek = getDay(monthStart);
   const emptyDays = Array(firstDayOfWeek).fill(null);
 
-  const { data: attendance, isLoading } = useQuery({
+  const { data: attendanceResponse, isLoading } = useQuery({
     queryKey: ['attendance', currentDate.getFullYear(), currentDate.getMonth() + 1],
     queryFn: () =>
       attendanceApi.getMyAttendance(
         currentDate.getMonth() + 1,
         currentDate.getFullYear()
-      ) as Promise<AttendanceRecord[]>,
+      ) as Promise<AttendanceResponse | AttendanceRecord[]>,
   });
+
+  // Handle both old format (array) and new format (object with attendances and holidays)
+  const attendance = Array.isArray(attendanceResponse)
+    ? attendanceResponse
+    : (attendanceResponse?.attendances || []);
+  const holidays = Array.isArray(attendanceResponse)
+    ? []
+    : (attendanceResponse?.holidays || []);
 
   const markAttendanceMutation = useMutation({
     mutationFn: (status: AttendanceStatus) => attendanceApi.mark({ status }),
@@ -66,10 +90,18 @@ export default function AttendancePage() {
         variant: 'success',
       });
     },
-    onError: () => {
+    onError: (error: any) => {
+      let errorMessage = 'Failed to mark attendance. Please try again.';
+
+      if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+
       toast({
         title: 'Error',
-        description: 'Failed to mark attendance. Please try again.',
+        description: errorMessage,
         variant: 'destructive',
       });
     },
@@ -83,6 +115,15 @@ export default function AttendancePage() {
     if (!attendance) return undefined;
     const dateStr = format(day, 'yyyy-MM-dd');
     return attendance.find((a: AttendanceRecord) => format(new Date(a.date), 'yyyy-MM-dd') === dateStr);
+  };
+
+  const getHolidayForDay = (day: Date): Holiday | undefined => {
+    if (!holidays || holidays.length === 0) return undefined;
+    const dateStr = format(day, 'yyyy-MM-dd');
+    return holidays.find((h: Holiday) => {
+      const holidayDateStr = format(new Date(h.date), 'yyyy-MM-dd');
+      return holidayDateStr === dateStr;
+    });
   };
 
   const navigateMonth = (direction: 'prev' | 'next') => {
@@ -103,7 +144,7 @@ export default function AttendancePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-8">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -133,11 +174,13 @@ export default function AttendancePage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {Object.entries(statusConfig).map(([key, config]) => (
-                <SelectItem key={key} value={key}>
-                  {config.label}
-                </SelectItem>
-              ))}
+              {Object.entries(statusConfig)
+                .filter(([key]) => key === 'WFO' || key === 'WFH')
+                .map(([key, config]) => (
+                  <SelectItem key={key} value={key}>
+                    {config.label}
+                  </SelectItem>
+                ))}
             </SelectContent>
           </Select>
           <Button
@@ -158,7 +201,7 @@ export default function AttendancePage() {
         className="rounded-2xl border border-border bg-white shadow-sm overflow-hidden"
       >
         <div className="px-6 py-4 border-b border-border bg-white">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
               <CalendarIcon className="h-5 w-5 text-primary" />
               {format(currentDate, 'MMMM yyyy')}
@@ -210,39 +253,70 @@ export default function AttendancePage() {
             ))}
             {daysInMonth.map((day) => {
               const attendanceData = getStatusForDay(day);
+              const holiday = getHolidayForDay(day);
               const isCurrentDay = isToday(day);
               const status = attendanceData?.status as AttendanceStatus;
               const config = status ? statusConfig[status] : null;
+              const isMandatoryHoliday = holiday?.isMandatory === true;
+              const isOptionalHoliday = holiday && !isMandatoryHoliday;
 
               return (
                 <motion.div
                   key={day.toString()}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  whileHover={{ scale: 1.05 }}
-                  className={`relative h-20 p-2 border rounded-lg transition-all duration-200 ${
-                    isCurrentDay
-                      ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
-                      : 'border-border bg-white hover:bg-muted/50'
-                  } ${config ? config.color : ''}`}
+                  whileHover={!isMandatoryHoliday ? { scale: 1.05 } : {}}
+                  className={`relative h-20 p-2 border rounded-lg transition-all duration-200 ${isMandatoryHoliday
+                      ? 'bg-slate-200 border-slate-300 cursor-default'
+                      : isOptionalHoliday
+                        ? 'bg-sky-100 border-sky-200 hover:bg-sky-200'
+                        : isCurrentDay
+                          ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                          : 'border-border bg-white hover:bg-muted/50'
+                    } ${config && !isMandatoryHoliday ? config.color : ''}`}
+                  title={holiday ? holiday.name : undefined}
                 >
                   <div className="flex flex-col h-full">
                     <span
-                      className={`text-sm font-medium ${
-                        isCurrentDay ? 'text-primary' : 'text-foreground'
-                      }`}
+                      className={`text-sm font-medium ${isMandatoryHoliday
+                          ? 'text-slate-700'
+                          : isOptionalHoliday
+                            ? 'text-sky-700'
+                            : isCurrentDay
+                              ? 'text-primary'
+                              : 'text-foreground'
+                        }`}
                     >
                       {format(day, 'd')}
                     </span>
-                    {attendanceData && config && (
+                    {isMandatoryHoliday ? (
+                      <div className="mt-auto">
+                        <div className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border bg-slate-200 text-slate-700 border-slate-300">
+                          <span className="hidden sm:inline">{holiday.name}</span>
+                        </div>
+                      </div>
+                    ) : isOptionalHoliday ? (
+                      <div className="mt-auto flex flex-col gap-1">
+                        <div className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border bg-sky-100 text-sky-700 border-sky-300">
+                          <span className="hidden sm:inline">{holiday.name}</span>
+                        </div>
+                        {attendanceData && config && (
+                          <div
+                            className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${config.color}`}
+                          >
+                            <span className="hidden sm:inline">{status}</span>
+                          </div>
+                        )}
+                      </div>
+                    ) : attendanceData && config ? (
                       <div className="mt-auto">
                         <div
                           className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${config.color}`}
                         >
-                          {status}
+                          <span className="hidden sm:inline">{status}</span>
                         </div>
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 </motion.div>
               );
@@ -251,19 +325,21 @@ export default function AttendancePage() {
         </div>
       </motion.div>
 
-      {/* Legend */}
+      {/* Status Legend */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.3 }}
         className="rounded-2xl border border-border bg-white p-6 shadow-sm"
       >
-        <h3 className="text-sm font-semibold text-foreground mb-4">Legend</h3>
-        <div className="flex flex-wrap gap-4">
+        <h3 className="text-sm font-semibold text-foreground mb-4">Status Legend</h3>
+        <div className="flex flex-wrap gap-x-6 gap-y-3">
           {Object.entries(statusConfig).map(([key, config]) => (
             <div key={key} className="flex items-center gap-2">
-              <div className={`w-3 h-3 rounded-full ${config.badge}`}></div>
-              <span className="text-sm text-muted-foreground">{config.label}</span>
+              <div className={`w-4 h-4 rounded border ${config.color}`}></div>
+              <span className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">{key}</span> - {config.label}
+              </span>
             </div>
           ))}
         </div>

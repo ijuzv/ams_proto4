@@ -9,6 +9,10 @@ declare module '@prisma/client' {
   }
 }
 
+// Ensure PrismaClient is treated as a runtime value so the compiled JS includes the import.
+// Without this, TypeScript may erase the import as "type-only", which leads to `client_1` being undefined.
+const prismaClientRuntimeRef = PrismaClient;
+
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit {
   async onModuleInit() {
