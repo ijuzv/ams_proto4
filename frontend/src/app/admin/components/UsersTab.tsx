@@ -180,7 +180,7 @@ export function UsersTab() {
   };
 
   const handleExport = () => {
-    exportData('http://localhost:3001/users/export', {
+    exportData(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/users/export`, {
       search: searchTxt,
     }, 'users_export.xlsx');
   }

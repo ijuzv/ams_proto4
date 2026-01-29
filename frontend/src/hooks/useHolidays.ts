@@ -30,7 +30,7 @@ export function useHolidays() {
   const { data: holidays, isLoading, error } = useQuery({
     queryKey: ['holidays'],
     queryFn: async () => {
-      const { data } = await axios.get('http://localhost:3001/holidays', {
+      const { data } = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/holidays`, {
         headers: getHeaders(),
       });
       return data as Holiday[];
@@ -39,7 +39,7 @@ export function useHolidays() {
 
   const createHoliday = useMutation({
     mutationFn: async (newHoliday: CreateHolidayDto) => {
-      const { data } = await axios.post('http://localhost:3001/holidays', newHoliday, {
+      const { data } = await axios.post(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/holidays`, newHoliday, {
         headers: getHeaders(),
       });
       return data;
@@ -51,7 +51,7 @@ export function useHolidays() {
 
   const updateHoliday = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: UpdateHolidayDto }) => {
-      const response = await axios.put(`http://localhost:3001/holidays/${id}`, data, {
+      const response = await axios.put(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/holidays/${id}`, data, {
         headers: getHeaders(),
       });
       return response.data;
@@ -63,7 +63,7 @@ export function useHolidays() {
 
   const deleteHoliday = useMutation({
     mutationFn: async (id: number) => {
-      await axios.delete(`http://localhost:3001/holidays/${id}`, {
+      await axios.delete(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/holidays/${id}`, {
         headers: getHeaders(),
       });
     },

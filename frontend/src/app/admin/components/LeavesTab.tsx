@@ -36,7 +36,7 @@ export function LeavesTab() {
   const meta = leavesData?.meta || { total: 0, totalPages: 0 };
 
   const handleExport = () => {
-    exportData('http://localhost:3001/leaves/export', {
+    exportData(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/leaves/export`, {
       search: searchTxt,
       status: statusFilter !== 'all' ? statusFilter : undefined,
       date: dateFilter || undefined

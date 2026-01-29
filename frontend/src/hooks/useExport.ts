@@ -34,7 +34,7 @@ export function useExport() {
   const exportGlobal = async (params: any): Promise<void> => {
     return new Promise((resolve, reject) => {
       setIsExporting(true);
-      axios.post('http://localhost:3001/export/global', params, {
+      axios.post(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/export/global`, params, {
         responseType: 'blob',
         headers: {
           Authorization: `Bearer ${localStorage.getItem('auth_token')}`

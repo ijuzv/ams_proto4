@@ -79,7 +79,7 @@ export function AttendanceTab() {
 
   const handleExport = () => {
     exportData(
-      "http://localhost:3001/attendance/export",
+      `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/attendance/export`,
       {
         search: searchTxt,
         status: statusFilter !== "all" ? statusFilter : undefined,
